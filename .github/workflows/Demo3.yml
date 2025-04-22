@@ -1,0 +1,38 @@
+name: Deploy script.bat to BigFix on change
+
+on:
+  push:
+    paths:
+      - 'deploy/script.bat'  # Monitor only this file for changes
+
+jobs:
+  deploy_to_bigfix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Check if file changed
+        id: check_file
+        run: |
+          echo "Checking for changes in deploy/script.bat..."
+          git fetch origin ${{ github.event.before }}
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^deploy/script.bat$'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to BigFix
+        if: steps.check_file.outputs.changed == 'true'
+        run: |
+          echo "Detected change in deploy/script.bat. Deploying to BigFix..."
+          
+          # Example API call — replace this with your actual BigFix deployment logic
+          curl -X POST https://your-bigfix-server:52311/api/deploy \
+            -H "Authorization: Bearer ${{ secrets.BIGFIX_TOKEN }}" \
+            -F "file=@deploy/script.bat"
+
+        # If you use a CLI script instead of an API:
+        # run: ./scripts/deploy-to-bigfix.sh deploy/script.bat
